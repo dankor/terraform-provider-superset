@@ -47,6 +47,7 @@ type databaseResourceModel struct {
 	AllowDML       types.Bool   `tfsdk:"allow_dml"`
 	AllowRunAsync  types.Bool   `tfsdk:"allow_run_async"`
 	ExposeInSQLLab types.Bool   `tfsdk:"expose_in_sqllab"`
+	UUID           types.String `tfsdk:"uuid"`
 }
 
 // Metadata returns the resource type name.
@@ -115,6 +116,10 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Expose in SQL Lab.",
 				Required:    true,
 			},
+			"uuid": schema.StringAttribute{
+				Description: "Database UUID.",
+				Required:    true,
+			},
 		},
 	}
 }
@@ -146,6 +151,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		"database_name":                     plan.ConnectionName.ValueString(),
 		"sqlalchemy_uri":                    sqlalchemyURI,
 		"extra":                             extra,
+		"uuid":                              plan.UUID.ValueString(),
 	}
 
 	result, err := r.client.CreateDatabase(payload)
@@ -201,6 +207,15 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	}
 	if val, ok := resultData["expose_in_sqllab"].(bool); ok {
 		plan.ExposeInSQLLab = types.BoolValue(val)
+	}
+	if val, ok := resultData["database_name"].(string); ok {
+		plan.UUID = types.StringValue(val)
+	} else {
+		resp.Diagnostics.AddError(
+			"Invalid Response",
+			"The response from the API does not contain a valid 'uuid' field",
+		)
+		return
 	}
 
 	diags = resp.State.Set(ctx, &plan)
@@ -293,6 +308,9 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 			state.DBPass = types.StringNull()
 		}
 	}
+	if val, ok := result["uuid"].(string); ok {
+		state.UUID = types.StringValue(val)
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -342,6 +360,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 		"database_name":                     plan.ConnectionName.ValueString(),
 		"sqlalchemy_uri":                    sqlalchemyURI,
 		"extra":                             extra,
+		"uuid":                              plan.UUID.ValueString(),
 	}
 
 	result, err := r.client.UpdateDatabase(state.ID.ValueInt64(), payload)
@@ -394,6 +413,7 @@ func (r *databaseResource) Update(ctx context.Context, req resource.UpdateReques
 	state.DBHost = types.StringValue(plan.DBHost.ValueString())
 	state.DBPort = types.Int64Value(plan.DBPort.ValueInt64())
 	state.DBName = types.StringValue(plan.DBName.ValueString())
+	state.UUID = types.StringValue(plan.UUID.ValueString())
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
