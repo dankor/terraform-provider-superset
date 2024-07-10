@@ -208,7 +208,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if val, ok := resultData["expose_in_sqllab"].(bool); ok {
 		plan.ExposeInSQLLab = types.BoolValue(val)
 	}
-	if val, ok := resultData["database_name"].(string); ok {
+	if val, ok := resultData["uuid"].(string); ok {
 		plan.UUID = types.StringValue(val)
 	} else {
 		resp.Diagnostics.AddError(
